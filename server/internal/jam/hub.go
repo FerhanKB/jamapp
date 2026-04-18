@@ -191,3 +191,28 @@ func (h *Hub) onState(fromUser uuid.UUID, state StateMsg) {
 	h.mu.Unlock()
 	h.broadcast("state", state)
 }
+
+// forwardToHost delivers a typed payload to the current host only. Used for
+// guest-initiated actions (queue_add, skip) that the host actually executes.
+func (h *Hub) forwardToHost(msgType string, payload any) {
+	env, _ := json.Marshal(Message{
+		Type:    msgType,
+		Payload: mustJSON(payload),
+	})
+	h.mu.Lock()
+	host := h.hostID
+	c, ok := h.members[host]
+	h.mu.Unlock()
+	if !ok {
+		return
+	}
+	select {
+	case c.send <- env:
+	default:
+	}
+}
+
+func mustJSON(v any) json.RawMessage {
+	b, _ := json.Marshal(v)
+	return b
+}

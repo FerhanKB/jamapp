@@ -7,6 +7,7 @@ import {
 } from "../api/playlists";
 import { player } from "../player/player";
 import { copyShareLink } from "../share";
+import { inJam, requestAddToQueue } from "../jam/session";
 
 interface Props {
   playlistId: string;
@@ -110,15 +111,19 @@ export function PlaylistView({ playlistId, onChange }: Props) {
             </div>
             <div className="row-actions">
               <button
-                onClick={() =>
-                  void player.playFromList(playlist.tracks!, i)
-                }
-                title="Play from here"
+                onClick={() => {
+                  if (inJam()) requestAddToQueue(t);
+                  else void player.playFromList(playlist.tracks!, i);
+                }}
+                title={inJam() ? "Add to jam queue" : "Play from here"}
               >
-                Play
+                {inJam() ? "Add" : "Play"}
               </button>
               <button
-                onClick={() => player.enqueue(t)}
+                onClick={() => {
+                  if (inJam()) requestAddToQueue(t);
+                  else player.enqueue(t);
+                }}
                 title="Add to queue"
               >
                 +Q

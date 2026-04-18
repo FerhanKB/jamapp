@@ -4,6 +4,7 @@ import type { Track } from "../api/types";
 import { addTrack, listPlaylists, type Playlist } from "../api/playlists";
 import { player } from "../player/player";
 import { copyShareLink } from "../share";
+import { inJam, requestAddToQueue } from "../jam/session";
 
 interface Props {
   onPlaylistChange: () => void;
@@ -87,8 +88,22 @@ export function SearchView({ onPlaylistChange }: Props) {
                 <span>{t.artist}</span>
               </div>
               <div className="row-actions">
-                <button onClick={() => player.play(t)}>Play</button>
-                <button onClick={() => player.enqueue(t)} title="Add to queue">
+                <button
+                  onClick={() => {
+                    if (inJam()) requestAddToQueue(t);
+                    else void player.play(t);
+                  }}
+                  title={inJam() ? "Add to jam queue" : "Play"}
+                >
+                  {inJam() ? "Add" : "Play"}
+                </button>
+                <button
+                  onClick={() => {
+                    if (inJam()) requestAddToQueue(t);
+                    else player.enqueue(t);
+                  }}
+                  title="Add to queue"
+                >
                   +Q
                 </button>
                 <button onClick={() => onShare(t)} title="Copy share link">

@@ -267,6 +267,22 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 			if err := json.Unmarshal(env.Payload, &s); err == nil {
 				hub.onState(claims.UserID, s)
 			}
+		case "queue_add", "queue_remove", "skip":
+			// Guest-initiated playback request. Forward raw payload to the
+			// host, which executes it and broadcasts the resulting state.
+			// Host's own messages are a no-op (host can act locally).
+			hub.mu.Lock()
+			isHost := hub.hostID == claims.UserID
+			hub.mu.Unlock()
+			if !isHost {
+				var payload map[string]any
+				_ = json.Unmarshal(env.Payload, &payload)
+				if payload == nil {
+					payload = map[string]any{}
+				}
+				payload["from_user_id"] = claims.UserID.String()
+				hub.forwardToHost(env.Type, payload)
+			}
 		case "leave":
 			goto done
 		}

@@ -19,6 +19,8 @@ function notify() {
   listeners.forEach((fn) => fn(active?.getState() ?? null));
 }
 
+let hostUnsubs: Array<() => void> = [];
+
 function startHostLoop(client: JamClient) {
   stopHostLoop();
   const push = () => {
@@ -28,19 +30,38 @@ function startHostLoop(client: JamClient) {
       track,
       position_ms: Math.floor(p.position * 1000),
       playing: p.playing,
-    });
+      queue: p.queue,
+    } as any);
   };
-  const unsub = player.subscribe(() => {
-    if (!client.isHost() || applyingRemoteState) return;
-    push();
-  });
+  hostUnsubs.push(
+    player.subscribe(() => {
+      if (!client.isHost() || applyingRemoteState) return;
+      push();
+    }),
+  );
   hostHeartbeat = setInterval(() => {
     if (!client.isHost()) return;
     push();
   }, HOST_HEARTBEAT_MS);
+
+  // Host acts on guest-requested actions.
+  hostUnsubs.push(
+    client.onAction((type, payload) => {
+      if (!client.isHost()) return;
+      if (type === "queue_add" && payload?.track) {
+        player.enqueue(payload.track);
+        push();
+      } else if (type === "skip") {
+        void (async () => {
+          await player.next();
+          push();
+        })();
+      }
+    }),
+  );
+
   // Initial push
   push();
-  return unsub;
 }
 
 function stopHostLoop() {
@@ -48,6 +69,28 @@ function stopHostLoop() {
     clearInterval(hostHeartbeat);
     hostHeartbeat = null;
   }
+  hostUnsubs.forEach((fn) => fn());
+  hostUnsubs = [];
+}
+
+export function requestAddToQueue(track: Track) {
+  if (!active) return false;
+  if (active.isHost()) {
+    player.enqueue(track);
+    return true;
+  }
+  active.sendAction("queue_add", { track });
+  return true;
+}
+
+export function requestSkip() {
+  if (!active) return false;
+  if (active.isHost()) {
+    void player.next();
+    return true;
+  }
+  active.sendAction("skip", {});
+  return true;
 }
 
 async function applyRemoteState(s: JamState) {
@@ -156,4 +199,12 @@ export function subscribeJam(fn: Listener): () => void {
 
 export function inJam(): boolean {
   return active !== null;
+}
+
+/** In a jam, the authoritative queue is the host's. Otherwise fall back to local. */
+export function effectiveQueue(): Track[] {
+  if (active && !active.isHost()) {
+    return active.getState().lastServerState?.queue ?? [];
+  }
+  return player.getState().queue;
 }

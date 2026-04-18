@@ -11,6 +11,16 @@ export interface JamState {
   position_ms: number;
   playing: boolean;
   server_ts: number;
+  queue?: Track[];
+}
+
+export interface QueueAddPayload {
+  track: import("../api/types").Track;
+  from_user_id?: string;
+}
+
+export interface SkipPayload {
+  from_user_id?: string;
 }
 
 type IncomingMessage =
@@ -18,7 +28,9 @@ type IncomingMessage =
   | { type: "member_joined"; payload: Member }
   | { type: "member_left"; payload: Member }
   | { type: "host_changed"; payload: { host_id: string } }
-  | { type: "state"; payload: JamState };
+  | { type: "state"; payload: JamState }
+  | { type: "queue_add"; payload: QueueAddPayload }
+  | { type: "skip"; payload: SkipPayload };
 
 interface JoinedPayload {
   you_id: string;
@@ -39,6 +51,7 @@ export interface JamRoomState {
 
 type Listener = (s: JamRoomState) => void;
 type StateListener = (s: JamState) => void;
+type ActionListener = (type: "queue_add" | "skip", payload: any) => void;
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 const WS_URL = BASE_URL.replace(/^http/, "ws");
@@ -49,6 +62,7 @@ export class JamClient {
   private state: JamRoomState;
   private listeners = new Set<Listener>();
   private stateListeners = new Set<StateListener>();
+  private actionListeners = new Set<ActionListener>();
 
   constructor(roomId: string) {
     this.roomId = roomId;
@@ -120,6 +134,10 @@ export class JamClient {
         this.update({ lastServerState: msg.payload });
         this.emitState(msg.payload);
         break;
+      case "queue_add":
+      case "skip":
+        this.actionListeners.forEach((fn) => fn(msg.type, msg.payload));
+        break;
     }
   }
 
@@ -131,6 +149,18 @@ export class JamClient {
         payload: { ...state, server_ts: 0 },
       }),
     );
+  }
+
+  sendAction(type: "queue_add" | "skip" | "queue_remove", payload: unknown = {}) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ type, payload }));
+  }
+
+  onAction(fn: ActionListener): () => void {
+    this.actionListeners.add(fn);
+    return () => {
+      this.actionListeners.delete(fn);
+    };
   }
 
   isHost(): boolean {
