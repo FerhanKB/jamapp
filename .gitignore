@@ -1,9 +1,30 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 target/
-.env
-.env.local
-*.log
-.DS_Store
-client/src-tauri/target/
 client/dist/
+client/src-tauri/target/
+
+# Env / secrets (never commit — re-create from server/.env.example)
+.env
+.env.*
+!.env.example
+server/.env
+
+# Signing keys (local only — GH Actions uses repo secrets)
+*.key
+*.key.pub
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp

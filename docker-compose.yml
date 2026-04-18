@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: jamapp
       POSTGRES_PASSWORD: jamapp
@@ -9,6 +10,25 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jamapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ADDR: ":8080"
+      DATABASE_URL: postgres://jamapp:jamapp@db:5432/jamapp?sslmode=disable
+    env_file:
+      - ./server/.env
+    ports:
+      - "8080:8080"
 
 volumes:
   pgdata:
