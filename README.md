@@ -12,12 +12,12 @@ Download the latest build for your OS from the [Releases page](https://github.co
   chmod +x jamapp_*_amd64.AppImage
   ./jamapp_*_amd64.AppImage
   ```
-  Also requires `yt-dlp` in `PATH`. On Arch/CachyOS: `sudo pacman -S yt-dlp`.
 
 - **Windows** — `jamapp_*_x64-setup.exe`. Double-click to install.
   First launch shows a SmartScreen warning ("Unknown publisher") — click
   **More info → Run anyway**. Happens once.
-  Also requires `yt-dlp.exe` in `PATH` — [download here](https://github.com/yt-dlp/yt-dlp/releases).
+
+The app auto-downloads `yt-dlp` on first use if it's not already installed.
 
 The app checks for updates on launch; when one's available, a green
 "Update to X" button appears in the header — one click upgrades and relaunches.

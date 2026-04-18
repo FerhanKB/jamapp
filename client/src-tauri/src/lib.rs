@@ -1,15 +1,18 @@
+mod ytdlp;
+
 use std::process::Command;
 
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 #[tauri::command]
-async fn resolve_youtube_audio(video_id: String) -> Result<String, String> {
+async fn resolve_youtube_audio(app: AppHandle, video_id: String) -> Result<String, String> {
     if !video_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
         return Err("invalid video id".into());
     }
+    let binary = ytdlp::ensure(&app).await?;
     let url = format!("https://www.youtube.com/watch?v={}", video_id);
     let output = tokio::task::spawn_blocking(move || {
-        Command::new("yt-dlp")
+        Command::new(&binary)
             .args(["-f", "bestaudio", "-g", "--no-warnings", &url])
             .output()
     })
