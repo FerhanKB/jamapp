@@ -36,6 +36,24 @@ jobs:
         working-directory: client
         run: npm ci
 
+      - name: Extract release notes for this tag
+        id: notes
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Extract the block between "## [VERSION]" and the next "## ["
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { grab=1; next }
+            grab && /^## \[/ { exit }
+            grab { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "No changelog entry for $VERSION — using fallback." >&2
+            echo "Release $GITHUB_REF_NAME." > RELEASE_NOTES.md
+          fi
+          echo "---- RELEASE_NOTES.md ----"
+          cat RELEASE_NOTES.md
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,7 +64,7 @@ jobs:
           projectPath: client
           tagName: ${{ github.ref_name }}
           releaseName: 'jamapp ${{ github.ref_name }}'
-          releaseBody: 'Automated release.'
+          releaseBodyPath: RELEASE_NOTES.md
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

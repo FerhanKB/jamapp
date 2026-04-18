@@ -17,13 +17,14 @@ Builds run in GitHub Actions for Linux (`.AppImage`, `.deb`) and Windows (`.msi`
 ### Cutting a release
 
 1. Bump version in `client/src-tauri/tauri.conf.json` and `client/package.json`.
-2. Commit. Tag and push:
+2. Edit `CHANGELOG.md`: rename the `## [Unreleased]` section to the new version (with today's date) and start a fresh empty `## [Unreleased]` on top.
+3. Commit. Tag and push:
    ```
    git tag v0.2.0
    git push origin v0.2.0
    ```
-3. GitHub Actions builds artifacts, creates a draft release, uploads signed artifacts, then a second job builds `latest.json` from the signatures and un-drafts the release.
-4. Existing installed clients check `https://github.com/FerhanKB/jamapp/releases/latest/download/latest.json` on launch. If the version is newer, the header shows an "Update to X" button.
+4. GitHub Actions builds artifacts, extracts the changelog section for this version into release notes, creates a draft release, uploads signed artifacts, then a second job builds `latest.json` from the signatures and un-drafts the release.
+5. Existing installed clients check `https://github.com/FerhanKB/jamapp/releases/latest/download/latest.json` on launch. If the version is newer, the header shows an "Update to X" button.
 
 ### Users
 
