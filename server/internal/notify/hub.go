@@ -22,6 +22,11 @@ type Message struct {
 type Hub struct {
 	mu    sync.Mutex
 	conns map[uuid.UUID][]chan []byte
+
+	// Optional callbacks fired when a user's first connection opens /
+	// their last one closes. Used by presence tracking.
+	OnConnect    func(userID uuid.UUID)
+	OnDisconnect func(userID uuid.UUID)
 }
 
 func NewHub() *Hub {
@@ -85,7 +90,15 @@ func (h *Hub) WS(w http.ResponseWriter, r *http.Request) {
 
 	ch := make(chan []byte, 16)
 	h.add(claims.UserID, ch)
-	defer h.remove(claims.UserID, ch)
+	if h.OnConnect != nil {
+		h.OnConnect(claims.UserID)
+	}
+	defer func() {
+		h.remove(claims.UserID, ch)
+		if h.OnDisconnect != nil {
+			h.OnDisconnect(claims.UserID)
+		}
+	}()
 
 	done := make(chan struct{})
 

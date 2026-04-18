@@ -13,9 +13,23 @@ import (
 	"github.com/fkb/jamapp/server/internal/jam"
 	"github.com/fkb/jamapp/server/internal/notify"
 	"github.com/fkb/jamapp/server/internal/playlists"
+	"github.com/fkb/jamapp/server/internal/presence"
 	"github.com/fkb/jamapp/server/internal/youtube"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
+
+// presenceAdapter wires presence.Service to friends.PresenceLookup.
+type presenceAdapter struct{ svc *presence.Service }
+
+func (p presenceAdapter) StatesFor(ids []uuid.UUID) map[uuid.UUID]friends.PresenceState {
+	raw := p.svc.StatesFor(ids)
+	out := make(map[uuid.UUID]friends.PresenceState, len(raw))
+	for id, s := range raw {
+		out[id] = friends.PresenceState{Online: s.Online, JamRoomID: s.JamRoomID}
+	}
+	return out
+}
 
 func main() {
 	_ = godotenv.Load()
@@ -33,13 +47,17 @@ func main() {
 	}
 	log.Println("db migrated")
 
+	notifyHub := notify.NewHub()
+	presenceSvc := presence.NewService(pool, notifyHub)
+	notifyHub.OnConnect = presenceSvc.OnConnect
+	notifyHub.OnDisconnect = presenceSvc.OnDisconnect
+
 	ah := &auth.Handler{DB: pool}
 	yh := &youtube.Handler{Client: youtube.NewClient()}
 	ph := &playlists.Handler{DB: pool}
-	fh := &friends.Handler{DB: pool}
-	notifyHub := notify.NewHub()
+	fh := &friends.Handler{DB: pool, Presence: presenceAdapter{svc: presenceSvc}}
 	jamReg := jam.NewRegistry(pool)
-	jh := &jam.Handler{DB: pool, Registry: jamReg, Notifier: notifyHub}
+	jh := &jam.Handler{DB: pool, Registry: jamReg, Notifier: notifyHub, Presence: presenceSvc}
 
 	authed := func(fn http.HandlerFunc) http.Handler {
 		return auth.Middleware(http.HandlerFunc(fn))

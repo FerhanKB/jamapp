@@ -18,10 +18,16 @@ type Notifier interface {
 	Send(userID uuid.UUID, msgType string, payload any)
 }
 
+type Presence interface {
+	SetJam(userID, roomID uuid.UUID)
+	ClearJam(userID uuid.UUID)
+}
+
 type Handler struct {
 	DB       *pgxpool.Pool
 	Registry *Registry
 	Notifier Notifier
+	Presence Presence
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -210,6 +216,9 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	member := Member{UserID: claims.UserID, Username: username}
 
 	hub.join(member, send)
+	if h.Presence != nil {
+		h.Presence.SetJam(claims.UserID, roomID)
+	}
 
 	// Writer
 	go func() {
@@ -264,5 +273,8 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	}
 done:
 	hub.leave(claims.UserID, send)
+	if h.Presence != nil {
+		h.Presence.ClearJam(claims.UserID)
+	}
 	_ = conn.Close()
 }

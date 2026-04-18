@@ -4,6 +4,8 @@ export interface Friend {
   user_id: string;
   username: string;
   direction?: "incoming" | "outgoing";
+  online?: boolean;
+  jam_room_id?: string | null;
 }
 
 export interface FriendsResponse {

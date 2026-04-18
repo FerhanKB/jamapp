@@ -12,15 +12,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type PresenceLookup interface {
+	StatesFor(ids []uuid.UUID) map[uuid.UUID]PresenceState
+}
+
+type PresenceState struct {
+	Online    bool       `json:"online"`
+	JamRoomID *uuid.UUID `json:"jam_room_id,omitempty"`
+}
+
 type Handler struct {
-	DB *pgxpool.Pool
+	DB       *pgxpool.Pool
+	Presence PresenceLookup
 }
 
 type Friend struct {
 	UserID   uuid.UUID `json:"user_id"`
 	Username string    `json:"username"`
 	// direction: who sent the pending request. Only set for pending.
-	Direction string `json:"direction,omitempty"` // "incoming" | "outgoing" | ""
+	Direction string     `json:"direction,omitempty"` // "incoming" | "outgoing" | ""
+	Online    bool       `json:"online"`
+	JamRoomID *uuid.UUID `json:"jam_room_id,omitempty"`
 }
 
 type listResponse struct {
@@ -78,6 +90,20 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 				f.Direction = "incoming"
 			}
 			resp.Pending = append(resp.Pending, f)
+		}
+	}
+
+	// Attach presence for accepted friends.
+	if h.Presence != nil && len(resp.Friends) > 0 {
+		ids := make([]uuid.UUID, 0, len(resp.Friends))
+		for _, f := range resp.Friends {
+			ids = append(ids, f.UserID)
+		}
+		states := h.Presence.StatesFor(ids)
+		for i := range resp.Friends {
+			s := states[resp.Friends[i].UserID]
+			resp.Friends[i].Online = s.Online
+			resp.Friends[i].JamRoomID = s.JamRoomID
 		}
 	}
 	writeJSON(w, http.StatusOK, resp)

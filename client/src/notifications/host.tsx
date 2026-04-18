@@ -7,6 +7,7 @@ import {
 } from "./client";
 import { joinJam } from "../jam/session";
 import { navigate } from "../nav";
+import { applyPresenceEvent, clearPresence } from "../presence";
 
 interface Prompt {
   id: number;
@@ -28,9 +29,20 @@ export function NotificationsHost() {
         const invite = payload as JamInvite;
         const id = next++;
         setPrompts((prev) => [...prev, { id, invite }]);
+      } else if (type === "friend_presence") {
+        applyPresenceEvent(
+          payload as {
+            user_id: string;
+            online: boolean;
+            jam_room_id: string | null;
+          },
+        );
       }
     });
-    return () => disconnectNotifications();
+    return () => {
+      disconnectNotifications();
+      clearPresence();
+    };
   }, [user]);
 
   function dismiss(id: number) {

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import {
   acceptFriend,
   getFriends,
@@ -6,6 +6,18 @@ import {
   removeFriend,
   type FriendsResponse,
 } from "../api/friends";
+import {
+  getPresence,
+  presenceVersion,
+  seedPresence,
+  subscribePresence,
+} from "../presence";
+import { joinJam } from "../jam/session";
+import { navigate } from "../nav";
+
+function usePresenceTick() {
+  return useSyncExternalStore(subscribePresence, presenceVersion);
+}
 
 export function FriendsView() {
   const [data, setData] = useState<FriendsResponse>({
@@ -16,10 +28,13 @@ export function FriendsView() {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  usePresenceTick();
 
   async function refresh() {
     try {
-      setData(await getFriends());
+      const res = await getFriends();
+      setData(res);
+      seedPresence(res.friends);
     } catch {
       // ignore
     }
@@ -61,6 +76,11 @@ export function FriendsView() {
     if (!confirm(confirmMsg)) return;
     await removeFriend(userId);
     await refresh();
+  }
+
+  async function onJoinFriendJam(roomId: string) {
+    await joinJam(roomId);
+    navigate({ kind: "jam", roomId });
   }
 
   const incoming = data.pending.filter((p) => p.direction === "incoming");
@@ -136,20 +156,40 @@ export function FriendsView() {
           </p>
         ) : (
           <ul className="friends-list">
-            {data.friends.map((f) => (
-              <li key={f.user_id}>
-                <span>@{f.username}</span>
-                <div className="row-actions">
-                  <button
-                    onClick={() =>
-                      onRemove(f.user_id, `Unfriend @${f.username}?`)
-                    }
-                  >
-                    Unfriend
-                  </button>
-                </div>
-              </li>
-            ))}
+            {data.friends.map((f) => {
+              const p = getPresence(f.user_id);
+              return (
+                <li key={f.user_id}>
+                  <span className="friend-label">
+                    <span
+                      className={`presence-dot ${p.online ? "on" : "off"}`}
+                      title={p.online ? "online" : "offline"}
+                    />
+                    @{f.username}
+                    {p.jamRoomId && (
+                      <span className="in-jam-badge">in a jam</span>
+                    )}
+                  </span>
+                  <div className="row-actions">
+                    {p.jamRoomId && (
+                      <button
+                        onClick={() => onJoinFriendJam(p.jamRoomId!)}
+                        className="join-btn"
+                      >
+                        Join
+                      </button>
+                    )}
+                    <button
+                      onClick={() =>
+                        onRemove(f.user_id, `Unfriend @${f.username}?`)
+                      }
+                    >
+                      Unfriend
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

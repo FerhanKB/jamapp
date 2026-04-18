@@ -820,3 +820,40 @@ button.link:hover {
 .update-prompt:hover:not(:disabled) {
   background: #1ed75f;
 }
+
+.friend-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.presence-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+}
+
+.presence-dot.on {
+  background: #1db954;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.15);
+}
+
+.in-jam-badge {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.join-btn {
+  background: #1db954 !important;
+  color: #000 !important;
+  border-color: transparent !important;
+  font-weight: 600;
+}
