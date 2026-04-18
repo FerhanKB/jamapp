@@ -31,7 +31,7 @@
       "active": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM3RkMwOUEzQzUwMDQ4MzIKUldReVNBREZvd244TndReW15WWpjWENLNldkME9iYnRQZTc3SDVvbkQ2UHhKZUtNSndvOFJkU2cK",
       "endpoints": [
-        "https://github.com/ferhankb/jamapp/releases/latest/download/latest.json"
+        "https://github.com/FerhanKB/jamapp/releases/latest/download/latest.json"
       ]
     }
   },

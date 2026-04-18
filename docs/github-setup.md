@@ -1,6 +1,6 @@
 # GitHub push setup
 
-One-time setup to push this repo to `github.com/ferhankb/jamapp`.
+One-time setup to push this repo to `github.com/FerhanKB/jamapp`.
 
 ## 1. Create the empty repo
 
@@ -11,7 +11,7 @@ https://github.com/new → name `jamapp` → **leave README/license/gitignore un
 ### Option A — HTTPS + Personal Access Token
 
 ```
-git remote set-url origin https://github.com/ferhankb/jamapp.git
+git remote set-url origin https://github.com/FerhanKB/jamapp.git
 git push -u origin main
 ```
 
@@ -32,7 +32,7 @@ Copy the output → https://github.com/settings/keys → *New SSH key* → paste
 
 Then:
 ```
-git remote set-url origin git@github.com:ferhankb/jamapp.git
+git remote set-url origin git@github.com:FerhanKB/jamapp.git
 git push -u origin main
 ```
 

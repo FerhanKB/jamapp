@@ -5,7 +5,7 @@ playlists, and friends. Sources: YouTube (via yt-dlp) and Spotify (planned).
 
 ## For users — just install the app
 
-Download the latest build for your OS from the [Releases page](https://github.com/ferhankb/jamapp/releases/latest):
+Download the latest build for your OS from the [Releases page](https://github.com/FerhanKB/jamapp/releases/latest):
 
 - **Linux (any distro)** — `jamapp_*_amd64.AppImage`
   ```sh
@@ -34,7 +34,7 @@ sync. Run one instance; everyone points their app at it.
 ### Quick start
 
 ```sh
-git clone https://github.com/ferhankb/jamapp.git
+git clone https://github.com/FerhanKB/jamapp.git
 cd jamapp
 cp server/.env.example server/.env       # fill in YOUTUBE_API_KEY + JWT_SECRET
 docker compose up -d

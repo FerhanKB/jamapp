@@ -21,7 +21,7 @@ Builds run in GitHub Actions for Linux (`.AppImage`, `.deb`) and Windows (`.msi`
    git push origin v0.2.0
    ```
 3. GitHub Actions builds artifacts, creates a draft release, uploads signed artifacts, then a second job builds `latest.json` from the signatures and un-drafts the release.
-4. Existing installed clients check `https://github.com/ferhankb/jamapp/releases/latest/download/latest.json` on launch. If the version is newer, the header shows an "Update to X" button.
+4. Existing installed clients check `https://github.com/FerhanKB/jamapp/releases/latest/download/latest.json` on launch. If the version is newer, the header shows an "Update to X" button.
 
 ### Users
 
