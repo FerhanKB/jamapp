@@ -1,0 +1,108 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: client
+          tagName: ${{ github.ref_name }}
+          releaseName: 'jamapp ${{ github.ref_name }}'
+          releaseBody: 'Automated release.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build latest.json from release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          VERSION="${TAG#v}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          TMP=$(mktemp -d)
+          cd "$TMP"
+
+          # Fetch .sig files from the draft release so we can embed signatures.
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.sig' --dir sigs || true
+
+          base_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+
+          linux_appimage=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -E '\.AppImage$' | head -1)
+          windows_nsis=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -E 'setup\.exe$' | head -1)
+
+          linux_sig=""
+          windows_sig=""
+          if [ -n "$linux_appimage" ] && [ -f "sigs/${linux_appimage}.sig" ]; then
+            linux_sig=$(cat "sigs/${linux_appimage}.sig")
+          fi
+          if [ -n "$windows_nsis" ] && [ -f "sigs/${windows_nsis}.sig" ]; then
+            windows_sig=$(cat "sigs/${windows_nsis}.sig")
+          fi
+
+          cat > latest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "linux-x86_64": {
+                "signature": "${linux_sig}",
+                "url": "${base_url}/${linux_appimage}"
+              },
+              "windows-x86_64": {
+                "signature": "${windows_sig}",
+                "url": "${base_url}/${windows_nsis}"
+              }
+            }
+          }
+          EOF
+
+          cat latest.json
+          gh release upload "$TAG" latest.json --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
