@@ -8,9 +8,11 @@ Builds run in GitHub Actions for Linux (`.AppImage`, `.deb`) and Windows (`.msi`
 
 1. Private signing key generated at `~/.jamapp-updater.key`. **Never commit it.**
 2. Public key embedded in `client/src-tauri/tauri.conf.json` under `plugins.updater.pubkey`.
-3. Add two repository secrets in GitHub (`Settings → Secrets and variables → Actions`):
+3. Add two repository **secrets** in GitHub (`Settings → Secrets and variables → Actions → Secrets`):
    - `TAURI_SIGNING_PRIVATE_KEY` — contents of `~/.jamapp-updater.key`
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — empty (or the password if you set one)
+4. Add one repository **variable** (same page → Variables tab):
+   - `VITE_API_URL` — `https://ifkb.dev/jamapp` (the public server URL friends' apps will talk to)
 
 ### Cutting a release
 
